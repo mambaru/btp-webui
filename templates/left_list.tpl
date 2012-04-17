@@ -30,11 +30,11 @@
 		e.preventDefault();
 	});
 	$(".form-search input").bind("keydown",_.debounce(function() {
-		var v = $(this).val().toLowerCase();
 		var $jsLeftList = $('.js-left-list');
+		var $jsLeftListLi = $jsLeftList.find('LI');
+		var v = $(this).val().toLowerCase();
 		if (v && v.length>=3) {
 			var pvalshow = {};
-			var $jsLeftListLi = $jsLeftList.find('LI');
 			$jsLeftListLi.hide();
 			$jsLeftListLi.each(function() {
 				var $that = $(this);
