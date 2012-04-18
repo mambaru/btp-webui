@@ -291,7 +291,6 @@ function draw_pair(elem,data1,data3,from,from_scale) {
 $(function(){
 	
 	btp.show('serverlist', {data: App.hostConfig}, '#serverlist');
-	
 	for (var k in App.hostConfig) {
 		window.btp.host = k;
 		break;
@@ -302,9 +301,13 @@ $(function(){
 	var m = document.cookie.match(/JCB\{(.+)\}JCE/);
 	if (m!=null) {
 		var data = getJsonFromUrl(m[1]);
-		if (typeof(data.scale)!='undefined') App.setScale(data.scale*1);
-		if (typeof(data.host)!='undefined') App.setHost(data.host);
+		if (typeof(data.scale)!='undefined') App.scale = data.scale*1;
+		if (typeof(data.host)!='undefined') window.btp.host = data.host;
 	}
+	App.setScale(App.scale);
+	App.setHost(window.btp.host);
+
+
 	new App.Controllers();
 
 	btp.show('layout',{},'#content');
