@@ -22,7 +22,7 @@ var DashboardsHelpers = {
 				g.addTime(t,caption);
 			}
 			g.setTs(res.ts);
-			g.render({width: '530px',height: '250px', display:'inline-block'});
+			g.render({css:{width: '530px',height: '250px', display:'inline-block'}});
 		});
 		return g.createNode();
 	},
