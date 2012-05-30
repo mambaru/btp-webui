@@ -3,7 +3,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<meta charset="utf-8">
-	<?php $v = 5; $conf=""; ?>
+	<?php $v = 5; $conf=file_exists('conf_path')?file_get_contents('conf_path'):""; ?>
 	<title>Новая пинба</title>
 	<link rel="stylesheet" href="bootstrap/css/bootstrap.css" type="text/css">
 	<link rel="stylesheet" href="bootstrap/css/bootstrap-responsive.min.css" type="text/css">
@@ -22,9 +22,9 @@
 	<script src="date.format.js"></script>
 	
 	<script src="controllers.js?v=<?=$v?>"></script>
-	<script src="config.<?=$conf?>js?v=<?=$v?>"></script>
+	<script src="<?=$conf?>config.js?v=<?=$v?>"></script>
 	<script src="main.js?v=<?=$v?>"></script>
-	<script src="dashboards.<?=$conf?>js?v=<?=$v?>"></script>
+	<script src="<?=$conf?>dashboards.js?v=<?=$v?>"></script>
 	
 	<style type="text/css" media="screen">
 		body, #content {overflow-y: hidden;}
