@@ -1,11 +1,12 @@
 <?php
 
-define('JPGRAPH_PATH', 'jpgraph_src');
+define('JPGRAPH_PATH', 'jpgraph');
 
 include JPGRAPH_PATH."/jpgraph.php";
 include JPGRAPH_PATH."/jpgraph_line.php";
 include JPGRAPH_PATH."/jpgraph_date.php";
 include "Json.php";
+include 'graph_cache.php';
 header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date in the past
 
@@ -21,44 +22,8 @@ $items = json_decode($_REQUEST['items'],true);
 $scale = intval($_REQUEST['scale']);
 $slice = $_REQUEST['slice'];
 $params['scale'] = $scale; 
+$normalization = !empty($_REQUEST['normalization']);
 
-$graph = new Graph(1440/3+50,250);
-$graph->SetScale("datint");
-
-/*$graph->img->SetAntiAliasing(false);
-$graph->SetBox(false);
-
-$graph->img->SetAntiAliasing();*/
-
-//$graph->yaxis->HideZeroLabel();
-//$graph->yaxis->HideLine(false);
-//$graph->yaxis->HideTicks(false,false);
-
-//$graph->yaxis->HideTicks(false,false);
-
-$graph->SetMargin(50,0,0,20);
-
-if (isset($_REQUEST['title'])) {
-	$graph->title->Set($_REQUEST['title']);
-} elseif (count($items)==1) {
-	$graph->title->Set(implode(', ',$items[0])." ".$slice);
-}
-
-$graph->xgrid->Show();
-$graph->xgrid->SetLineStyle("solid");
-//$graph->xaxis->SetTickLabels(array('A','B','C','D'));
-$graph->xgrid->SetColor('#E3E3E3');
-if ($scale==60) {
-	$graph->xaxis->scale->ticks->Set($scale*60*2);
-	$graph->xaxis->scale->SetDateFormat('H:i');
-} else {
-	$graph->xaxis->scale->ticks->Set($scale*60*4);
-}
-
-$list = array();
-foreach ($items as $prop) {
-	$list[] = $conn->request('get_graph',$prop+$params);
-}
 
 function summize($data,$v) {
 	$r = array();
@@ -73,45 +38,118 @@ function summize($data,$v) {
 		}
 	}
 	if ($c!=0) die("FAIL");
-//	echo $s.'x';exit;
 	return $r;
 }
 
+
+//прореживание
 $count = 1440;
-$normscale = 1;
+$normscale = empty($_REQUEST['normscale']) ? 1 : intval($_REQUEST['normscale']);
 $normcount = $count/$normscale;
 $divscale = ($slice=='count'?$scale:1000);
 
-$plotcounts = 0;
-foreach ($list as $item) {
-	$data = $item->get();
+if (!empty($_REQUEST['width']) && !empty($_REQUEST['height'])) {
+    $width = intval($_REQUEST['width']);
+    $height = intval($_REQUEST['height']);
+} else {
+    $width = 1440/3+50;
+    $height = 250;
+}
+
+// проверяем кэш
+$Cache = new Graph_Cache(array(
+    'params' => $params, 'items' => $items, 'scale' => $scale, 'slice' => $slice, 'host' => $host, 
+    'width' => $width, 'height' => $height, 'normscale' => $normscale
+));
+$Cache->setTTL($scale*$normscale);
+if ($Cache->check()) {
+    $Cache->output();
+    exit;
+}
+
+
+//сделать нужные запросы
+$qlist = array();
+foreach ($items as $prop) {
+	$qlist[] = array(implode('',$prop), $conn->request('get_graph', $prop+$params)->get());
+}
+
+$ts = 0;
+$sum_data = array();
+$list = array();
+foreach ($qlist as $lk=>$pair) {
+	list($key, $data) = $pair;
 	if (!$data['data']) continue;
+	
 	$nonz = 0;
 	foreach ($data['data'] as $item) if ($item['count']!=0) {$nonz++; if ($nonz>=2) break;}
 	if ($nonz<2) continue;
+
+	$ts = $data['ts'];
+
+	$plotdata = array_map(function($x) use ($divscale,$slice) {return $x['count']?$x[$slice]/$divscale:null;}, $data['data']);
+	$plotdata = summize($plotdata, $normscale);
 	
-	$timedata = array_map(function($x) use($data,$scale,$normscale,$normcount) { return $data['ts']+($x-$normcount)*$scale*$normscale;},range(0,$normcount-1));
+	foreach ($plotdata as $k=>$v) $sum_data[$k] = (isset($sum_data[$k])?$sum_data[$k]:0) + $v;
+	$list[] = array($key, $plotdata);
+	
+}
+$timedata = array_map(function($x) use($ts,$scale,$normscale,$normcount) { return $ts+($x-$normcount)*$scale*$normscale;},range(0,$normcount-1));
 
-	$plotdata = array_slice($data['data'],count($data['data'])-$count*2-2,$count);
-	$plotdata = array_map(function($x) use ($divscale,$slice) {return $x['count']?$x[$slice]/$divscale:null;}, $plotdata);
-	//print_r($plotdata);
-	$plotdata = summize($plotdata,$normscale);
-	//print_r($plotdata);exit;
-	$plot = new LinePlot($plotdata, $timedata);
+
+$height += ceil(count($list)/2)*20;
+$graph = new Graph($width, $height);
+$graph->SetScale("datlin");
+$graph->SetTheme(new FixedTheme());
+$graph->SetMargin(45, 5, 25, 25);
+
+if (isset($_REQUEST['title'])) {
+    $graph->title->Set($_REQUEST['title']);
+} elseif (count($items)==1) {
+    $graph->title->Set(implode(', ',$items[0])." ".$slice);
+}
+
+$graph->xgrid->Show();
+$graph->xgrid->SetLineStyle("solid");
+
+$graph->xgrid->SetColor('#E3E3E3');
+if ($scale==60) {
+    $graph->xaxis->scale->ticks->Set($scale*60*2);
+    $graph->xaxis->scale->SetDateFormat('H:i');
+} else {
+    $graph->xaxis->scale->ticks->Set($scale*60*4);
+}
+
+
+$plotcounts = 0;
+foreach ($list as $pair) {
+	list($key,$plotdata) = $pair;
+	
+	if ($normalization) foreach ($plotdata as $k=>$v) $plotdata[$k] = $sum_data[$k]?100*$plotdata[$k]/$sum_data[$k]:null;
+
+	if (count($list)==1) {
+		$tmp = array_slice($plotdata, count($plotdata)-$normcount*2-2, $normcount);
+		//print_r($plotdata);exit;
+		$plot = new LinePlot($tmp, $timedata);
+		$graph->Add($plot);
+		$plot->SetColor("#FFC8C8");
+	}
+
+	$tmp = array_slice($plotdata, count($plotdata)-$normcount-2, $normcount);
+	$plot = new LinePlot($tmp, $timedata);
 	$graph->Add($plot);
-	$plot->SetColor("#FFC8C8");
-
-	$plotdata = array_slice($data['data'],count($data['data'])-$count-2, $count);
-	$plotdata = array_map(function($x) use ($divscale,$slice) {return $x['count']?$x[$slice]/$divscale:null;}, $plotdata);
-	$plotdata = summize($plotdata,$normscale);
-	$plot = new LinePlot($plotdata, $timedata);
-	$graph->Add($plot);
-	$plot->SetColor("#5480E0");
-
-//	$p1->SetLegend('Line 1');
+	if (count($list)==1) {
+		$plot->SetColor("#5480E0");
+	} else {
+		$plot->SetLegend($key.' ('.round(max($tmp),2).' / '.round(end($tmp),2).')');
+//		$plot->setFillColor("#FFC8C8");
+//		$plot->setFilled(True);
+	}
+	//$plot->setFilled(true);
 
 	$plotcounts++;
 }
+
 if (!$plotcounts) {
 	$plot = new LinePlot(array(0), array(0));
 	$graph->Add($plot);
@@ -120,5 +158,5 @@ if (!$plotcounts) {
 //$graph->legend->SetFrameWeight(1);
 
 // Output line
-$graph->Stroke();
-
+$graph->Stroke($Cache->getFilename());
+$Cache->output();
