@@ -3,7 +3,7 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<meta charset="utf-8">
-	<?php $v = 5; $conf=file_exists('conf_path')?file_get_contents('conf_path'):""; ?>
+	<?php $v = 6; $conf=file_exists('conf_path')?file_get_contents('conf_path'):""; ?>
 	<title>Новая пинба</title>
 	<link rel="stylesheet" href="bootstrap/css/bootstrap.css" type="text/css">
 	<link rel="stylesheet" href="bootstrap/css/bootstrap-responsive.min.css" type="text/css">

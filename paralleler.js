@@ -37,7 +37,7 @@ var paralleler = function() {
 		if (s.counter == 0) s.finishFunc();
 	};
 	s.onfinish = function(func) {
-		s.finish.push(func);
+		if (s.counter>0) s.finish.push(func);
 		return s;
 	};
 	s.finishFunc = function() {
