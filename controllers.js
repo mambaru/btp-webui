@@ -169,6 +169,8 @@ App.OldControllers = {
 		App.Updaters.makelist('right_top','Серверы, которые обслуживают сервис '+name,'servers_of_'+name,{service:name,server:'?'}, curry(getLink,'service',name),true, undefined, function(res) {
 			if (res.length==1) {
 				Backbone.history.navigate(getLink('service',name,res[0]), {trigger: true, replace: true});
+			} else {
+				Backbone.history.navigate(getLink('service',name,""), {trigger: true, replace: true});
 			}
 		});
 	},
