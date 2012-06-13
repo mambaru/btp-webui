@@ -64,7 +64,7 @@ $Cache = new Graph_Cache(array(
     'width' => $width, 'height' => $height, 'normscale' => $normscale
 ));
 $Cache->setTTL($scale*$normscale);
-if ($Cache->check()) {
+if (empty($_REQUEST['nocache']) && $Cache->check()) {
     $Cache->output();
     exit;
 }
@@ -138,6 +138,9 @@ foreach ($list as $pair) {
 	}
 
 	$tmp = array_slice($plotdata, count($plotdata)-$normcount-2, $normcount);
+    if (!isEmptyData($tmp)) {
+        continue;
+    }
 	$plot = new LinePlot($tmp, $timedata);
 	$graph->Add($plot);
 	if (count($list)==1) {
@@ -162,3 +165,12 @@ if (!$plotcounts) {
 // Output line
 $graph->Stroke($Cache->getFilename());
 $Cache->output();
+
+function isEmptyData(array $data)
+{
+    $data = array_unique($data);
+    if (count($data) == 1 && reset($data) === NULL) {
+        return false;
+    }
+    return true;
+}
