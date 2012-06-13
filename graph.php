@@ -27,14 +27,16 @@ $normalization = !empty($_REQUEST['normalization']);
 
 function summize($data,$v) {
 	$r = array();
-	$s = 0; $c = 0;
+	$c = 0; $ss = array();
 	for ($i=0;$i<count($data);$i++) {
-		$s = ($data[$i]===null)?null:$s+$data[$i];
+        if ($data[$i] != null) {
+            $ss[] = $data[$i];
+        }
 		$c++;
 		if ($c==$v) {
-			$r[] = $s===null?null:$s/$v;
+			$r[] = empty($ss) ? null : array_sum($ss)/count($ss);
 			$c = 0;
-			$s = 0;
+            $ss = array();
 		}
 	}
 	if ($c!=0) die("FAIL");
