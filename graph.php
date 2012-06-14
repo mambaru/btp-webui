@@ -168,9 +168,5 @@ $Cache->output();
 
 function isEmptyData(array $data)
 {
-    $data = array_unique($data);
-    if (count($data) == 1 && reset($data) === NULL) {
-        return false;
-    }
-    return true;
+    return count(array_filter($data)) == 0;
 }
