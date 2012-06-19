@@ -100,7 +100,7 @@ foreach ($qlist as $lk=>$pair) {
 $timedata = array_map(function($x) use($ts,$scale,$normscale,$normcount) { return $ts+($x-$normcount)*$scale*$normscale;},range(0,$normcount-1));
 
 
-//$height += ceil(count($list)/2)*20;
+$height += ceil(count($list)/2)*20;
 $graph = new Graph($width, $height);
 $graph->SetScale("datlin");
 $graph->SetTheme(new FixedTheme());
