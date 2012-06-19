@@ -138,7 +138,7 @@ foreach ($list as $pair) {
 	}
 
 	$tmp = array_slice($plotdata, count($plotdata)-$normcount-2, $normcount);
-    if (!isEmptyData($tmp)) {
+    if (isEmptyData($tmp)) {
         continue;
     }
 	$plot = new LinePlot($tmp, $timedata);
