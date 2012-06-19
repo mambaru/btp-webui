@@ -1,6 +1,7 @@
 <?php
 
 define('JPGRAPH_PATH', 'jpgraph');
+error_reporting(E_ALL & (!E_STRICT)); //jpgraph produces error in E_STRICT
 
 include JPGRAPH_PATH."/jpgraph.php";
 include JPGRAPH_PATH."/jpgraph_line.php";
@@ -99,7 +100,7 @@ foreach ($qlist as $lk=>$pair) {
 $timedata = array_map(function($x) use($ts,$scale,$normscale,$normcount) { return $ts+($x-$normcount)*$scale*$normscale;},range(0,$normcount-1));
 
 
-$height += ceil(count($list)/2)*20;
+//$height += ceil(count($list)/2)*20;
 $graph = new Graph($width, $height);
 $graph->SetScale("datlin");
 $graph->SetTheme(new FixedTheme());
