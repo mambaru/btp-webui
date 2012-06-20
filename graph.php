@@ -99,6 +99,36 @@ foreach ($qlist as $lk=>$pair) {
 }
 $timedata = array_map(function($x) use($ts,$scale,$normscale,$normcount) { return $ts+($x-$normcount)*$scale*$normscale;},range(0,$normcount-1));
 
+function normalize(array $plotdata, array $sum_data)
+{
+    foreach ($plotdata as $k => $v) {
+        $plotdata[$k] = $sum_data[$k] ? 100*$plotdata[$k]/$sum_data[$k] : null;
+    }
+    return $plotdata;
+}
+
+if ($normalization)
+{
+    $list = array_map(function($pair) use ($sum_data) {
+        $pair[1] = normalize($pair[1], $sum_data);
+        return $pair;
+    }, $list);
+}
+
+function isEmptyData(array $data) {
+    return count(array_filter($data)) == 0;
+}
+
+if (count($list) > 1)
+{
+    $list = array_map(function($item) use ($normcount) {
+        $item[1] = array_slice($item[1], count($item[1])-$normcount*2-2, $normcount);
+        return $item;
+    }, $list);
+    $list = array_filter($list, function($item) {
+        return !isEmptyData($item[1]);
+    });
+}
 
 $height += ceil(count($list)/2)*20;
 $graph = new Graph($width, $height);
@@ -125,35 +155,39 @@ if ($scale==60) {
 
 
 $plotcounts = 0;
-foreach ($list as $pair) {
-	list($key,$plotdata) = $pair;
-	
-	if ($normalization) foreach ($plotdata as $k=>$v) $plotdata[$k] = $sum_data[$k]?100*$plotdata[$k]/$sum_data[$k]:null;
 
-	if (count($list)==1) {
-		$tmp = array_slice($plotdata, count($plotdata)-$normcount*2-2, $normcount);
-		//print_r($plotdata);exit;
-		$plot = new LinePlot($tmp, $timedata);
-		$graph->Add($plot);
-		$plot->SetColor("#FFC8C8");
-	}
-
-	$tmp = array_slice($plotdata, count($plotdata)-$normcount-2, $normcount);
-    if (isEmptyData($tmp)) {
-        continue;
+if (count($list) == 1)
+{
+    list($key, $plotdata) = reset($list);
+    
+    $dataset = array(
+        '#FFC8C8' => array_slice($plotdata, count($plotdata)-$normcount*2-2, $normcount),
+        '#5480E0' => array_slice($plotdata, count($plotdata)-$normcount-2, $normcount),
+    );
+    
+    foreach ($dataset as $color => $data)
+    {
+        if (isEmptyData($data)) {
+            continue;
+        }
+        $plot = new LinePlot($data, $timedata);
+        $graph->Add($plot);
+        $plot->SetColor($color);
+        $plotcounts++;
     }
-	$plot = new LinePlot($tmp, $timedata);
-	$graph->Add($plot);
-	if (count($list)==1) {
-		$plot->SetColor("#5480E0");
-	} else {
-		$plot->SetLegend($key.' ('.round(max($tmp),2).' / '.round(end($tmp),2).')');
-//		$plot->setFillColor("#FFC8C8");
-//		$plot->setFilled(True);
-	}
-	//$plot->setFilled(true);
-
-	$plotcounts++;
+}
+else
+{
+    foreach ($list as $pair)
+    {
+        list($key, $plotdata) = $pair;
+        
+        $plot = new LinePlot($plotdata, $timedata);
+        $graph->Add($plot);
+        $plot->SetLegend($key.' ('.round(max($tmp),2).' / '.round(end($tmp),2).')');
+    
+        $plotcounts++;
+    }
 }
 
 if (!$plotcounts) {
@@ -161,13 +195,6 @@ if (!$plotcounts) {
 	$graph->Add($plot);
 	$plot->SetColor("#5480E0");
 }
-//$graph->legend->SetFrameWeight(1);
 
-// Output line
 $graph->Stroke($Cache->getFilename());
 $Cache->output();
-
-function isEmptyData(array $data)
-{
-    return count(array_filter($data)) == 0;
-}
